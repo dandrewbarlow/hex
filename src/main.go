@@ -7,40 +7,75 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 )
 
+// IO VARS
 var inputFile string
+var outputFile string
 
-// supposed to parse args here; somthings wrong tho
+var corruptionRate float64
+
 func init() {
-	flag.StringVar(&inputFile, "input", "", "input file")
+
+	// INPUT FLAGS
 	flag.StringVar(&inputFile, "i", "", "input file")
+
+	// OUTPUT FLAGS
+	flag.StringVar(&outputFile, "o", "", "output file")
+
+	// CORRUPTION RATE FLAGS?
+	flag.Float64Var(&corruptionRate, "c", 0.005, "corruption rate")
 
 }
 
 func main() {
+
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+
+	// parse provided arguments
 	flag.Parse()
 
-	// early exit on failure
-	if inputFile == "" {
-		log.Fatalf("no file provided")
-	}
-
-	fmt.Println(inputFile)
-
+	// open file
 	f, err := os.Open(inputFile)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer f.Close()
+	/* may not be neccessary
+	// get file info
+	fi, err := f.Stat()
 
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	totalLines := fi.Size() / 256
+	*/
+
+	// create a reader and buffer
 	reader := bufio.NewReader(f)
 	buf := make([]byte, 256)
 
+	// create output file
+	out, err := os.Create(outputFile)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// defer closing input & output file
+	defer f.Close()
+	defer out.Close()
+
+	i := 0
+
 	for {
+		// read file into buffer
 		_, err := reader.Read(buf)
 
 		if err != nil {
@@ -50,14 +85,32 @@ func main() {
 			break
 		}
 
-		dst := make([]byte, hex.EncodedLen(len(buf)))
+		// hacky way to get 5% corruption
+		if r1.Float64() < corruptionRate {
 
-		hex.Encode(dst, buf)
+			// create buffer for byte in hex format
+			hexBuf := make([]byte, hex.EncodedLen(len(buf)))
 
-		// fmt.Println(line + "=====break====")
-		// fmt.Println(line[0:58])
-		fmt.Printf("%s", dst)
+			// encode as hex
+			hex.Encode(hexBuf, buf)
+
+			// randomly zer0 a byte (and try to avoid headers)
+			// TODO : more rigorous probability
+
+			outBuf := make([]byte, hex.DecodedLen(len(hexBuf)))
+
+			hex.Decode(hexBuf, outBuf)
+
+			out.Write(outBuf)
+
+			hexBuf[rand.Intn(len(hexBuf))] = 0
+
+		} else {
+			// don't waste the cpu timer if we're not changing the file
+			out.Write(buf)
+		}
+
+		i++
 	}
-}
 
-// 000000f0  4a 3a 2c d3 a7 42 0c bc  4d e2 df a2 a9 9a 0f 56  |J
+}
