@@ -12,8 +12,8 @@ outputs a beautifully broken version.
 ```
 -c float
    corruption rate (default 0.005)
-  -i string
+-i string
    input file
-  -o string
+-o string
    output file
 ```
