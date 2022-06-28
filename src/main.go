@@ -16,6 +16,7 @@ import (
 var inputFile string
 var outputFile string
 
+// SETTINGS VARS
 var corruptionRate float64
 
 func init() {
@@ -46,17 +47,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	/* may not be neccessary
-	// get file info
-	fi, err := f.Stat()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	totalLines := fi.Size() / 256
-	*/
-
 	// create a reader and buffer
 	reader := bufio.NewReader(f)
 	buf := make([]byte, 256)
@@ -71,8 +61,6 @@ func main() {
 	// defer closing input & output file
 	defer f.Close()
 	defer out.Close()
-
-	i := 0
 
 	for {
 		// read file into buffer
@@ -109,8 +97,6 @@ func main() {
 			// don't waste the cpu timer if we're not changing the file
 			out.Write(buf)
 		}
-
-		i++
 	}
 
 }
